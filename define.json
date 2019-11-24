@@ -1,0 +1,15 @@
+{
+  "vk": {
+    "api_key": "4bb556146aeaad159f4a06b0a9889efb750bf8841756dd4ad1351c24de828ac0f791574aafb16613f18d9",
+    "api_servise_token": "c5ea2f55c5ea2f55c5ea2f5556c588f660cc5eac5ea2f559f12d5907ace0abc12c73fe4",
+    "api_version": "5.95",
+    "api_secret": "S1dAd32dcxzQ",
+    "api_endpoint": "https://api.vk.com/method/"
+  },
+  "db": {
+    "adress": "localhost",
+    "name": "admin",
+    "password": "T(t)ArVPyVbfNpN",
+    "tab": "rg.guessthemovie"
+  }
+}

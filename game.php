@@ -2,6 +2,7 @@
 $data = json_decode(file_get_contents('php://input'));
 
 $define = json_decode(file_get_contents("define.json") , true);
+$phrases = json_decode(file_get_contents("phrases.json"));
 
 include_once("vk.php");
 include_once("db.php");
@@ -19,19 +20,16 @@ switch ($data->type) {
 		
 		$sql = $con->query("INSERT INTO `users` (vk_id, user_name, user_surname) VALUES ('{$vk_id}', '{$user_name}', '{$user_surname}')");
 		$sql = $con->query("INSERT INTO `users_rating` (vk_id) VALUES ('{$vk_id}')");
-		bot_messagesSendWithButton($vk_id, "🖐🏻 Привет, ну что, давай узнаем насколько хорошо ты разбираешься в кино?
-⚠ Игра находится на стадии тестирования, просим Вас сообщать о всех ошибках, спасибо! 		
-⚠ Внимание! Для игры с мобильных устройств необходима последняя версия приложения! 
-⚠ В ВК действует ограничение в 100 сообщений пользователя в час. Будь аккуратнее, твоя игра может быть неожиданно прервана.", $main_menu);
+		bot_messagesSendWithButton($vk_id, $phrases->greeting, $main_menu);
 		die('ok');
 	}
 
-	if(isset($data->object->payload)){
-		$button_get = json_decode($data->object->payload, true);
+	if(isset($data->object->payload)) {
+		$button_get 	= json_decode($data->object->payload, true);
 		$button_type 	= mb_strtolower($button_get['type']);
 		$button_info 	= mb_strtolower($button_get['info']);				
-	}else{
-		bot_messagesSendWithButton($vk_id, 'Игра поддерживает только кнопки. Поэтому необходима последняя версия ВК!', $main_menu);
+	}else {
+		bot_messagesSendWithButton($vk_id, $phrases->buttons_only, $main_menu);
 		die('ok');
 	}
 	
@@ -47,12 +45,11 @@ switch ($data->type) {
 					$user_place = user_place("week");
 					$rating = $con->query("SELECT * FROM `users_rating` ORDER BY `users_rating`.`points_week` DESC, `users_rating`.`time_week` DESC LIMIT 10") or die($con->error);
 					$cnt = 1;
-					$message = "Рейтинг обнуляется каждый понедельник в 22:00 по МСК\nТы на $user_place месте\n";
+					$message = "Ты на $user_place месте\n";
 					while($rating_row = $rating->fetch_assoc()){
 						$rating_vk_id = $rating_row["vk_id"];
 						$rating_points = $rating_row["points_week"];
-						
-						$rating_user  = $con->query("SELECT user_name,user_surname FROM `users` WHERE `vk_id` = '$rating_vk_id'") or die($con->error);
+						$rating_user  = $con->query("SELECT user_name, user_surname FROM `users` WHERE `vk_id` = '$rating_vk_id'") or die($con->error);
 						$rating_user_row = $rating_user->fetch_assoc();
 						$rating_user_name = $rating_user_row['user_name'];					
 						$rating_user_surname = $rating_user_row['user_surname'];					
@@ -88,8 +85,7 @@ switch ($data->type) {
 							case 10:
 								$display = "🔟";
 								break;
-						}					
-
+						}
 						$message .= "$display [id$rating_vk_id|$rating_user_name $rating_user_surname] $rating_points очков\n";
 						$cnt++;
 					}
@@ -99,11 +95,10 @@ switch ($data->type) {
 					$user_place = user_place("month");
 					$rating = $con->query("SELECT * FROM `users_rating` ORDER BY `users_rating`.`points_month` DESC, `users_rating`.`time_month` DESC LIMIT 10") or die($con->error);
 					$cnt = 1;
-					$message = "Рейтинг обнуляется каждое 8 число в 22:00 по МСК\nТы на $user_place месте\n";
+					$message = "Ты на $user_place месте\n";
 					while($rating_row = $rating->fetch_assoc()){
 						$rating_vk_id = $rating_row["vk_id"];
 						$rating_points = $rating_row["points_month"];
-						
 						$rating_user  = $con->query("SELECT user_name,user_surname FROM `users` WHERE `vk_id` = '$rating_vk_id'") or die($con->error);
 						$rating_user_row = $rating_user->fetch_assoc();
 						$rating_user_name = $rating_user_row['user_name'];					
@@ -148,7 +143,7 @@ switch ($data->type) {
 					bot_messagesSendWithButton($vk_id, $message, $main_menu);
 				break;
 				default:
-				bot_messagesSendWithButton($vk_id, 'Я не смог выполнить запрос', $main_menu);
+				bot_messagesSendWithButton($vk_id, $phrases->request_failed, $main_menu);
 			}
 		break;		
 		case 'answer':
@@ -167,7 +162,6 @@ switch ($data->type) {
 						$time_end = time();
 						$user_sessions = $con->query("SELECT * FROM `user_sessions` WHERE `vk_id` = '$vk_id' && is_open = 1 LIMIT 1") or die($con->error);
 						if($user_sessions->num_rows == 0){
-							bot_messagesSend(39026356, 'Ошибка 0 '.$vk_id);
 							die('ok');
 						}
 						$user_session = $user_sessions->fetch_assoc();
@@ -211,8 +205,7 @@ switch ($data->type) {
 						}
 						$place = user_place("week");
 						$msg = get_phrase("lose")."\n🎥 Правильный ответ: $film_title\nФильмов отгадано: $session_streak\nОчков набрано: $points\nТы на $place месте";
-						bot_messagesSendWithButton($vk_id, $msg, $main_menu);
-						
+						bot_messagesSendWithButton($vk_id, $msg, $main_menu);	
 						$sql = $con->query("UPDATE `user_sessions` SET `is_open` = '0', `session_end` = $time_end, session_time = $session_time, `points` = $points WHERE `id` = '$session_id'") or die($con->error);
 						$sql = $con->query("UPDATE `users` SET `all_count` = all_count + 1 WHERE `vk_id` = '$vk_id'") or die($con->error);	
 					}
@@ -228,17 +221,18 @@ switch ($data->type) {
 } 
 die('ok');
 
-function restart_game($vk_id){
+function restart_game($vk_id) {
 	GLOBAL $vk_id, $con;
 	$sql = $con->query("UPDATE `user_sessions` SET `is_open` = '0' WHERE `vk_id` = '$vk_id'") or die($con->error);
 	$sql = $con->query("INSERT INTO `user_sessions` (vk_id, `session_start`) VALUES ('{$vk_id}', UNIX_TIMESTAMP())");	
 }
 
-function new_round(){
-	GLOBAL $vk_id, $con;	
+function new_round() {
+	GLOBAL $vk_id, $con;
+	//TODO
 }
 
-function get_film(){
+function get_film() {
 	GLOBAL $vk_id, $con;
 	$user_sessions = $con->query("SELECT * FROM `user_sessions` WHERE `vk_id` = '$vk_id' && is_open = 1 LIMIT 1") or die($con->error);
 	$user_session = $user_sessions->fetch_assoc();
@@ -268,7 +262,7 @@ function get_film(){
 	return $data;
 }
 
-function keyboard_game_create($variants, $type, $info, $film_id){
+function keyboard_game_create($variants, $type, $info, $film_id) {
 	$buttons = [];
 	foreach ($variants as $variant){
 		array_push($buttons, [["action" => ["type" => "text", "payload" => "{\"type\": \"$type\",\"info\": \"$info\", \"film_id\": \"$film_id\", \"answer\": \"$variant\"}", "label" => "$variant"], "color" => "default"]]);
@@ -276,12 +270,12 @@ function keyboard_game_create($variants, $type, $info, $film_id){
 	return $buttons;
 }
 
-function get_phrase($file){
+function get_phrase($file) {
 	$phrase = file("assets/$file.txt");
 	return $phrase[array_rand($phrase)];
 }
 
-function new_rating_round($stage){
+function new_rating_round($stage) {
 	GLOBAL $vk_id, $con;
 	$data = get_film();
 	$keyboard = ["one_time" => true, "buttons" => keyboard_game_create($data["variants"], "answer", "rating_game", $data["film_id"])];
@@ -290,7 +284,7 @@ function new_rating_round($stage){
 		case 'new':
 			$photo = _bot_uploadPhoto($vk_id, "assets/photos/$film_backdrop");
 			$photo = "photo".$vk_id."_".$photo['id'];		
-			bot_messagesSendWithButton($vk_id, "⚠ В ВК действует ограничение в 100 сообщений пользователя в час. Будь аккуратнее, твоя игра может быть неожиданно прервана!\n".get_phrase("farewell"), json_encode($keyboard, JSON_UNESCAPED_UNICODE), [$photo]);
+			bot_messagesSendWithButton($vk_id, $phrases->vk_limit."\n".get_phrase("farewell"), json_encode($keyboard, JSON_UNESCAPED_UNICODE), [$photo]);
 		break;
 		case 'win':
 			$photo = _bot_uploadPhoto($vk_id, "assets/photos/$film_backdrop");
@@ -307,7 +301,7 @@ function new_rating_round($stage){
 	$sql = $con->query("UPDATE `user_sessions` SET `films` = '$add_film' WHERE `id` = '$session_id'") or die($con->error);	
 }
 
-function user_place($type){
+function user_place($type) {
 	GLOBAL $vk_id, $con;	
 	$rating = $con->query("SELECT vk_id FROM `users_rating` ORDER BY `users_rating`.`points_$type` DESC, `users_rating`.`time_$type` DESC") or die($con->error);
 	$cnt = 0;
@@ -316,6 +310,5 @@ function user_place($type){
 		if($rating_row['vk_id'] == $vk_id)break;		
 	}
 	return $cnt;
-}	
-
+}
 die('ok');
